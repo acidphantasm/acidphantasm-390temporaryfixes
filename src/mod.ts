@@ -1,20 +1,63 @@
 import { DependencyContainer } from "tsyringe";
 
+import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import { DatabaseServer } from "@spt/servers/DatabaseServer";
 import { IDatabaseTables } from "@spt/models/spt/server/IDatabaseTables";
+import { ConfigServer } from "@spt/servers/ConfigServer";
+import { ConfigTypes } from "@spt/models/enums/ConfigTypes";
 import { ILogger } from "@spt/models/spt/utils/ILogger";
+import type { StaticRouterModService } from "@spt/services/mod/staticRouter/StaticRouterModService";
 
-class TemporaryFixes implements IPostDBLoadMod
+import { MyCustomProfileCallbacks } from "./MyCustomProfileCallbacks";
+import { MyCustomProfileController } from "./MyCustomProfileController";
+import { MyCustomLocationGenerator } from "./MyCustomLocationGenerator";
+import { IGetBodyResponseData } from "@spt/models/eft/httpResponse/IGetBodyResponseData";
+
+class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
 {
+    private static container: DependencyContainer;
+
+    public preSptLoad(container: DependencyContainer): void
+    {
+        const staticRouterModService = container.resolve<StaticRouterModService>("StaticRouterModService");
+
+        container.register<MyCustomProfileCallbacks>("MyCustomProfileCallbacks", MyCustomProfileCallbacks);
+        container.register("ProfileCallbacks", { useToken: "MyCustomProfileCallbacks" });
+
+        container.register<MyCustomProfileController>("MyCustomProfileController", MyCustomProfileController);
+        container.register("ProfileController", { useToken: "MyCustomProfileController" });
+
+        container.register<MyCustomLocationGenerator>("MyCustomLocationGenerator", MyCustomLocationGenerator);
+        container.register("LocationGenerator", { useToken: "MyCustomLocationGenerator" });
+
+        
+        const profileCallbacks = container.resolve<MyCustomProfileCallbacks>("MyCustomProfileCallbacks");
+
+        staticRouterModService.registerStaticRouter(
+            "FixProfileSettingsRouter",
+            [
+                {
+                    url: "/client/profile/settings",
+                    action: async (url, info, sessionId, output): Promise<IGetBodyResponseData<boolean>> =>
+                    {
+                        const newOutput = profileCallbacks.getProfileSettings(url, info, sessionId);
+                        return newOutput;
+                    }
+                }
+            ],
+            "spt"
+        );
+    }
+
     public postDBLoad(container: DependencyContainer): void
     {
-        // get database from server
+        const logger = container.resolve<ILogger>("WinstonLogger");
         const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
+        const configServer = container.resolve<ConfigServer>("ConfigServer");
 
-        // Get all the in-memory json found in /assets/database
+        const giftConfig = configServer.getConfig(ConfigTypes.GIFTS);        
         const tables: IDatabaseTables = databaseServer.getTables();
-
 
         // Fix new figurines to be lootable
         const restrictionsInRaid = tables.globals.config.RestrictionsInRaid;
@@ -30,9 +73,50 @@ class TemporaryFixes implements IPostDBLoadMod
             const isIncluded =  newFigurines.some(itemID => restrictionsInRaid[restriction].TemplateId.includes(itemID))
             if (isIncluded)
             {
-                restrictionsInRaid[restriction].MaxInLobby = 100;
+                restrictionsInRaid[restriction].MaxInLobby = 0;
                 restrictionsInRaid[restriction].MaxInRaid = 100;
             }
+        }
+
+        // VALENS Gift Code Fix
+        const valensGift = giftConfig.gifts.VALENS;
+
+        for (const item in valensGift.items)
+        {   
+            // Parent Item
+            if (valensGift.items[item]._id == "a89275c1b18274ef7432a6d9" && valensGift.items[item]._tpl == "5aafa857e5b5b00018480968")
+            {
+                valensGift.items[item]._id = "a89275c1b18274ef7432a6d4";
+            }
+            // Attachments
+            if (valensGift.items[item].parentId == "a89275c1b18274ef7432a6d9" && valensGift.items[item]._tpl == "64b9e2037fdfb81df81e3c25")
+            {
+                valensGift.items[item].parentId = "a89275c1b18274ef7432a6d4";
+            }
+            if (valensGift.items[item].parentId == "a89275c1b18274ef7432a6d9" && valensGift.items[item]._tpl == "5aaf8e43e5b5b00015693246")
+            {
+                valensGift.items[item].parentId = "a89275c1b18274ef7432a6d4";
+            }
+            if (valensGift.items[item].parentId == "a89275c1b18274ef7432a6d9" && valensGift.items[item]._tpl == "5aaf9d53e5b5b00015042a52")
+            {
+                valensGift.items[item].parentId = "a89275c1b18274ef7432a6d4";
+            }
+            if (valensGift.items[item].parentId == "a89275c1b18274ef7432a6d9" && valensGift.items[item]._tpl == "5abcbb20d8ce87001773e258")
+            {
+                valensGift.items[item].parentId = "a89275c1b18274ef7432a6d4";
+            }
+        }
+
+        // Fix Unheard Profile Allowing EOD Display
+        const unheardProfile = tables.templates.profiles.Unheard;
+
+        if (unheardProfile.bear.character.Info.MemberCategory == 1024)
+        {
+            unheardProfile.bear.character.Info.MemberCategory = 1026;
+        }
+        if (unheardProfile.usec.character.Info.MemberCategory == 1024)
+        {
+            unheardProfile.usec.character.Info.MemberCategory = 1026;
         }
     }
 }

@@ -1,5 +1,6 @@
 import { DependencyContainer } from "tsyringe";
 
+// SPT imports
 import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import { DatabaseServer } from "@spt/servers/DatabaseServer";
@@ -8,11 +9,14 @@ import { ConfigServer } from "@spt/servers/ConfigServer";
 import { ConfigTypes } from "@spt/models/enums/ConfigTypes";
 import { ILogger } from "@spt/models/spt/utils/ILogger";
 import type { StaticRouterModService } from "@spt/services/mod/staticRouter/StaticRouterModService";
+import { IGetBodyResponseData } from "@spt/models/eft/httpResponse/IGetBodyResponseData";
 
+// Custom Classes
 import { MyCustomProfileCallbacks } from "./MyCustomProfileCallbacks";
 import { MyCustomProfileController } from "./MyCustomProfileController";
 import { MyCustomLocationGenerator } from "./MyCustomLocationGenerator";
-import { IGetBodyResponseData } from "@spt/models/eft/httpResponse/IGetBodyResponseData";
+import { MyCustomQuestController } from "./MyCustomQuestController";
+import { MyCustomQuestHelper } from "./MyCustomQuestHelper";
 
 class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
 {
@@ -30,6 +34,12 @@ class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
 
         container.register<MyCustomLocationGenerator>("MyCustomLocationGenerator", MyCustomLocationGenerator);
         container.register("LocationGenerator", { useToken: "MyCustomLocationGenerator" });
+
+        container.register<MyCustomQuestController>("MyCustomQuestController", MyCustomQuestController);
+        container.register("QuestController", { useToken: "MyCustomQuestController" });
+
+        container.register<MyCustomQuestHelper>("MyCustomQuestHelper", MyCustomQuestHelper);
+        container.register("QuestHelper", { useToken: "MyCustomQuestHelper" });
 
         
         const profileCallbacks = container.resolve<MyCustomProfileCallbacks>("MyCustomProfileCallbacks");

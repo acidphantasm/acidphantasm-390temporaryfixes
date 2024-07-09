@@ -17,6 +17,8 @@ import { MyCustomProfileController } from "./MyCustomProfileController";
 import { MyCustomLocationGenerator } from "./MyCustomLocationGenerator";
 import { MyCustomQuestController } from "./MyCustomQuestController";
 import { MyCustomQuestHelper } from "./MyCustomQuestHelper";
+import { IGiftsConfig } from "@spt/models/spt/config/IGiftsConfig";
+import { IBotConfig } from "@spt/models/spt/config/IBotConfig";
 
 class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
 {
@@ -66,7 +68,8 @@ class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
         const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
         const configServer = container.resolve<ConfigServer>("ConfigServer");
 
-        const giftConfig = configServer.getConfig(ConfigTypes.GIFTS);        
+        const giftConfig : IGiftsConfig = configServer.getConfig(ConfigTypes.GIFTS);
+        const botConfig : IBotConfig = configServer.getConfig(ConfigTypes.BOT);
         const tables: IDatabaseTables = databaseServer.getTables();
 
         // Fix new figurines to be lootable
@@ -128,6 +131,51 @@ class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
         {
             unheardProfile.usec.character.Info.MemberCategory = 1026;
         }
+
+        // Fix skier & peacekeeper bots
+        const presetBatchFix = botConfig.presetBatch;
+        const itemSpawnLimitsFix = botConfig.itemSpawnLimits;
+        
+        presetBatchFix["peacemaker"] = 10;
+        presetBatchFix["skier"] = 10;
+
+        itemSpawnLimitsFix["peacemaker"] = {};
+        itemSpawnLimitsFix["skier"] = {};
+
+        const equipmentFixPeacemaker = {
+            "peacemaker": {
+                "nvgIsActiveChanceDayPercent": 10,
+                "nvgIsActiveChanceNightPercent": 95,
+                "faceShieldIsActiveChancePercent": 100,
+                "lightIsActiveDayChancePercent": 35,
+                "lightIsActiveNightChancePercent": 95,
+                "laserIsActiveChancePercent": 95,
+                "forceStock": true,
+                "weaponModLimits": {
+                    "scopeLimit": 1,
+                    "lightLaserLimit": 1
+                }
+            }
+        }
+        const equipmentFixSkier = {
+            "skier": {
+                "nvgIsActiveChanceDayPercent": 10,
+                "nvgIsActiveChanceNightPercent": 95,
+                "faceShieldIsActiveChancePercent": 100,
+                "lightIsActiveDayChancePercent": 35,
+                "lightIsActiveNightChancePercent": 95,
+                "laserIsActiveChancePercent": 95,
+                "forceStock": true,
+                "weaponModLimits": {
+                    "scopeLimit": 1,
+                    "lightLaserLimit": 1
+                }
+            }
+        }
+        const pkProperties = Object.assign({}, botConfig.equipment, equipmentFixPeacemaker);
+        botConfig.equipment = pkProperties;
+        const skierProperties = Object.assign({}, botConfig.equipment, equipmentFixSkier);
+        botConfig.equipment = skierProperties;
     }
 }
 

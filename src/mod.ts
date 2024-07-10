@@ -19,6 +19,7 @@ import { MyCustomQuestController } from "./MyCustomQuestController";
 import { MyCustomQuestHelper } from "./MyCustomQuestHelper";
 import { IGiftsConfig } from "@spt/models/spt/config/IGiftsConfig";
 import { IBotConfig } from "@spt/models/spt/config/IBotConfig";
+import { ICoreConfig } from "@spt/models/spt/config/ICoreConfig";
 
 class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
 {
@@ -70,6 +71,7 @@ class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
 
         const giftConfig : IGiftsConfig = configServer.getConfig(ConfigTypes.GIFTS);
         const botConfig : IBotConfig = configServer.getConfig(ConfigTypes.BOT);
+        const coreConfig : ICoreConfig = configServer.getConfig(ConfigTypes.CORE);
         const tables: IDatabaseTables = databaseServer.getTables();
 
         // Fix new figurines to be lootable
@@ -176,6 +178,11 @@ class TemporaryFixes implements IPreSptLoadMod, IPostDBLoadMod
         botConfig.equipment = pkProperties;
         const skierProperties = Object.assign({}, botConfig.equipment, equipmentFixSkier);
         botConfig.equipment = skierProperties;
+
+        // Stash row limit change
+        const stashFix = coreConfig.features.chatbotFeatures.commandUseLimits;
+
+        stashFix["StashRows"] = 15;
     }
 }
 
